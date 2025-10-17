@@ -38,7 +38,7 @@ public class GameActivity extends AppCompatActivity {
 
     // Turn Timer Logic
     private Handler timerHandler = new Handler();
-    private static final int TURN_TIME_SECONDS = 15;
+    private static final int TURN_TIME_SECONDS = 10;
     private AtomicInteger currentTimerValue = new AtomicInteger(TURN_TIME_SECONDS);
 
     // Sequence Number untuk ACK

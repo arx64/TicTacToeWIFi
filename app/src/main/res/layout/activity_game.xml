@@ -97,7 +97,7 @@
         <ScrollView
             android:id="@+id/sv_chat_log_container"
             android:layout_width="match_parent"
-            android:layout_height="150dp"
+            android:layout_height="100dp"
             android:background="#F0F0F0"
             android:padding="5dp"
             android:layout_marginTop="10dp">
