@@ -28,7 +28,8 @@
         </activity>
         <activity
             android:name=".GameActivity"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">>
         </activity>
     </application>
 
