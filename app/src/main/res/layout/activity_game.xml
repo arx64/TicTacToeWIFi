@@ -1,0 +1,73 @@
+<!-- res/layout/activity_game.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:gravity="center_horizontal"
+    tools:context=".GameActivity">
+
+    <!-- Area Skor dan Nama Pemain -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="10dp">
+        <TextView
+            android:id="@+id/tv_score_x"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="X: 0"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:paddingEnd="20dp"/>
+        <TextView
+            android:id="@+id/tv_score_o"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="O: 0"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_game_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Menunggu Pemain Lain..."
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="20dp"/>
+
+    <GridLayout
+        android:id="@+id/game_board"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="3"
+        android:rowCount="3">
+
+        <!-- Tombol-tombol papan permainan (sama seperti sebelumnya) -->
+        <Button style="@style/BoardButton" android:id="@+id/btn_00" android:onClick="onCellClicked"/>
+        <Button style="@style/BoardButton" android:id="@+id/btn_01" android:onClick="onCellClicked"/>
+        <Button style="@style/BoardButton" android:id="@+id/btn_02" android:onClick="onCellClicked"/>
+        <Button style="@style/BoardButton" android:id="@+id/btn_10" android:onClick="onCellClicked"/>
+        <Button style="@style/BoardButton" android:id="@+id/btn_11" android:onClick="onCellClicked"/>
+        <Button style="@style/BoardButton" android:id="@+id/btn_12" android:onClick="onCellClicked"/>
+        <Button style="@style/BoardButton" android:id="@+id/btn_20" android:onClick="onCellClicked"/>
+        <Button style="@style/BoardButton" android:id="@+id/btn_21" android:onClick="onCellClicked"/>
+        <Button style="@style/BoardButton" android:id="@+id/btn_22" android:onClick="onCellClicked"/>
+
+    </GridLayout>
+
+    <Button
+        android:id="@+id/btn_reset"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Main Lagi"
+        android:layout_marginTop="20dp"
+        android:visibility="gone"
+        android:onClick="onResetClicked"/>
+
+</LinearLayout>
