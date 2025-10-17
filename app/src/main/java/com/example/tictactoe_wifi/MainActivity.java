@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.text.format.Formatter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.net.InetAddress;
@@ -17,20 +18,19 @@ import java.net.UnknownHostException;
 
 public class MainActivity extends AppCompatActivity {
 
-    // --- KONSTANTA JARINGAN ---
     public static final int MESSAGE_READ = 1;
     public static final int MESSAGE_CONNECTION_SUCCESS = 3;
     public static final int MESSAGE_CONNECTION_FAILED = 4;
     public static final int MESSAGE_STATUS = 5;
     public static final int PORT = 8888;
-    // --------------------------
 
-    private Button btnHost, btnJoin;
     private EditText etIpAddress, etPlayerName;
-    private TextView tvStatus, tvLocalIp;
+    private TextView tvStatus;
+    private RadioGroup rgSymbolChoice;
 
     private UdpCommunicator udpCommunicator;
     private String playerName;
+    private String chosenSymbol;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,28 +40,25 @@ public class MainActivity extends AppCompatActivity {
         initViews();
         displayLocalIp();
 
-        btnHost.setOnClickListener(v -> hostGame());
-        btnJoin.setOnClickListener(v -> joinGame());
+        findViewById(R.id.btn_host).setOnClickListener(v -> hostGame());
+        findViewById(R.id.btn_join).setOnClickListener(v -> joinGame());
     }
 
     private void initViews() {
-        btnHost = findViewById(R.id.btn_host);
-        btnJoin = findViewById(R.id.btn_join);
         etIpAddress = findViewById(R.id.et_ip_address);
         etPlayerName = findViewById(R.id.et_player_name);
         tvStatus = findViewById(R.id.status_text);
-        tvLocalIp = findViewById(R.id.tv_local_ip);
+        rgSymbolChoice = findViewById(R.id.rg_symbol_choice);
     }
 
     private void displayLocalIp() {
+        // ... (Logika display IP sama)
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (wifiManager != null) {
             @SuppressWarnings("deprecation")
             int ipAddressInt = wifiManager.getConnectionInfo().getIpAddress();
             String ipAddress = Formatter.formatIpAddress(ipAddressInt);
-            tvLocalIp.setText("IP Lokal Anda: " + ipAddress + " (Port: " + PORT + ")");
-        } else {
-            tvLocalIp.setText("IP Lokal Anda: WiFi tidak aktif.");
+            ((TextView)findViewById(R.id.tv_local_ip)).setText("IP Lokal Anda: " + ipAddress + " (Port: " + PORT + ")");
         }
     }
 
@@ -71,6 +68,9 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Masukkan nama Anda!", Toast.LENGTH_SHORT).show();
             return false;
         }
+        int selectedId = rgSymbolChoice.getCheckedRadioButtonId();
+        chosenSymbol = (selectedId == R.id.rb_x) ? "X" : "O";
+
         if (udpCommunicator != null) udpCommunicator.cancel();
         return true;
     }
@@ -79,7 +79,6 @@ public class MainActivity extends AppCompatActivity {
         if (!validateInput()) return;
         tvStatus.setText("Mencoba menjadi Host...");
 
-        // Inisialisasi Host Communicator
         udpCommunicator = new UdpCommunicator(handler, true);
         udpCommunicator.start();
     }
@@ -93,36 +92,30 @@ public class MainActivity extends AppCompatActivity {
         }
         tvStatus.setText("Mencoba terhubung ke " + ip + "...");
 
-        // Inisialisasi Client Communicator
-        udpCommunicator = new UdpCommunicator(handler, ip, false);
-        udpCommunicator.start();
+        try {
+            InetAddress.getByName(ip); // Validasi IP
+            udpCommunicator = new UdpCommunicator(handler, ip, false);
+            udpCommunicator.start();
 
-        // Kirim paket koneksi pertama (harus di thread terpisah karena send() memanggil I/O)
-        new Thread(() -> {
-            // Format: CONNECT:<NamaPemain>
-            udpCommunicator.send("CONNECT:" + playerName);
-        }).start();
+            // Kirim CONNECT: <Nama>,<SimbolPilihan>
+            new Thread(() -> {
+                udpCommunicator.send("CONNECT:" + playerName + "," + chosenSymbol);
+            }).start();
+        } catch (UnknownHostException e) {
+            tvStatus.setText("IP tidak valid.");
+            Toast.makeText(this, "IP tidak valid", Toast.LENGTH_SHORT).show();
+        }
     }
 
-    // Handler untuk menerima pesan dari thread jaringan
     Handler handler = new Handler(msg -> {
         switch (msg.what) {
             case MESSAGE_STATUS:
                 tvStatus.setText(msg.obj.toString());
                 break;
             case MESSAGE_CONNECTION_SUCCESS:
-                // Hanya Host yang menerima MESSAGE_CONNECTION_SUCCESS dari UdpCommunicator
+                // Host menerima koneksi
                 String status = msg.obj.toString();
                 tvStatus.setText(status);
-
-                // Host mengirim ACK ke Client
-                if (status.contains("Server")) {
-                    new Thread(() -> {
-                        // Format: ACK:<NamaHost>
-                        udpCommunicator.send("ACK:" + playerName);
-                    }).start();
-                    startGame(true, playerName, "Lawan"); // Nama lawan sementara "Lawan"
-                }
                 break;
             case MESSAGE_CONNECTION_FAILED:
                 tvStatus.setText(msg.obj.toString());
@@ -130,33 +123,60 @@ public class MainActivity extends AppCompatActivity {
                 break;
             case MESSAGE_READ:
                 String message = (String) msg.obj;
-                // Client menerima ACK dari Host
+
                 if (message.startsWith("ACK:")) {
-                    String opponentName = message.substring(4);
-                    startGame(false, playerName, opponentName);
+                    // Client menerima ACK: <NamaHost>,<SimbolHost>
+                    String[] parts = message.substring(4).split(",");
+                    String opponentName = parts[0];
+                    String opponentSymbol = parts[1];
+
+                    // Resolusi Simbol: Simbol kita mungkin berubah jika ada konflik
+                    String finalMySymbol = chosenSymbol;
+                    if (chosenSymbol.equals(opponentSymbol)) {
+                        finalMySymbol = (chosenSymbol.equals("X")) ? "O" : "X";
+                        Toast.makeText(this, "Simbol diubah menjadi " + finalMySymbol + " karena konflik.", Toast.LENGTH_LONG).show();
+                    }
+                    startGame(false, playerName, finalMySymbol, opponentName, opponentSymbol);
                 }
-                // Host menerima CONNECT dari Client
                 else if (message.startsWith("CONNECT:")) {
-                    String opponentName = message.substring(8);
-                    // Karena Host sudah mengirim ACK di MESSAGE_CONNECTION_SUCCESS, kita hanya perlu memulai game
-                    startGame(true, playerName, opponentName);
+                    // Host menerima CONNECT: <NamaClient>,<SimbolClient>
+                    String[] parts = message.substring(8).split(",");
+                    String opponentName = parts[0];
+                    String opponentSymbol = parts[1];
+
+                    // Resolusi Simbol (Host punya prioritas)
+                    String finalMySymbol = chosenSymbol;
+                    String finalOpponentSymbol = opponentSymbol;
+
+                    if (chosenSymbol.equals(opponentSymbol)) {
+                        // Host mempertahankan simbolnya, Client harus berubah
+                        finalOpponentSymbol = (chosenSymbol.equals("X")) ? "O" : "X";
+                    }
+
+                    // Kirim ACK ke Client dengan simbol yang sudah diresolusi
+                    String finalOpponentSymbolForAck = finalOpponentSymbol;
+                    new Thread(() -> {
+                        udpCommunicator.send("ACK:" + playerName + "," + finalMySymbol);
+                    }).start();
+
+                    startGame(true, playerName, finalMySymbol, opponentName, finalOpponentSymbol);
                 }
                 break;
         }
         return true;
     });
 
-    private void startGame(boolean isHost, String myName, String opponentName) {
+    private void startGame(boolean isHost, String myName, String mySymbol, String opponentName, String opponentSymbol) {
         Intent intent = new Intent(MainActivity.this, GameActivity.class);
         intent.putExtra("IS_HOST", isHost);
         intent.putExtra("MY_NAME", myName);
+        intent.putExtra("MY_SYMBOL", mySymbol);
         intent.putExtra("OPPONENT_NAME", opponentName);
+        intent.putExtra("OPPONENT_SYMBOL", opponentSymbol);
 
-        // Kirim referensi Communicator (meskipun tidak ideal, ini cara tercepat)
         GameActivity.udpCommunicator = udpCommunicator;
 
         startActivity(intent);
-        // finish();
     }
 
     @Override
