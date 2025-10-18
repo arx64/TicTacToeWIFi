@@ -12,7 +12,7 @@
         android:id="@+id/status_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Status Koneksi: Belum Terhubung"
+        android:text="@string/status_koneksi_belum_terhubung"
         android:textSize="18sp"
         android:layout_marginBottom="20dp"/>
 
@@ -20,15 +20,16 @@
         android:id="@+id/et_player_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Masukkan Nama Anda"
+        android:hint="@string/masukkan_nama_anda"
         android:inputType="textPersonName"
+        android:autofillHints="name"
         android:maxLength="10"
         android:layout_marginBottom="10dp"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Pilih Simbol Awal:"
+        android:text="@string/pilih_simbol_awal"
         android:layout_marginTop="5dp"/>
 
     <RadioGroup
@@ -37,36 +38,37 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_marginBottom="10dp">
-        <RadioButton android:id="@+id/rb_x" android:text="X (Mulai Duluan)" android:checked="true" android:layout_height="wrap_content" android:layout_width="wrap_content"/>
-        <RadioButton android:id="@+id/rb_o" android:text="O" android:layout_height="wrap_content" android:layout_width="wrap_content"/>
+        <RadioButton android:id="@+id/rb_x" android:text="@string/x_mulai_duluan" android:checked="true" android:layout_height="wrap_content" android:layout_width="wrap_content"/>
+        <RadioButton android:id="@+id/rb_o" android:text="@string/o" android:layout_height="wrap_content" android:layout_width="wrap_content"/>
     </RadioGroup>
 
     <Button
         android:id="@+id/btn_host"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="HOST GAME (Server)"
+        android:text="@string/host_game_server"
         android:layout_marginBottom="10dp"/>
 
     <EditText
         android:id="@+id/et_ip_address"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Masukkan IP Server (Jika Join)"
+        android:hint="@string/masukkan_ip_server_jika_join"
         android:inputType="text"
+        android:autofillHints="ip"
         android:layout_marginBottom="10dp"/>
 
     <Button
         android:id="@+id/btn_join"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="JOIN GAME (Client)"/>
+        android:text="@string/join_game_client"/>
 
     <TextView
         android:id="@+id/tv_local_ip"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="30dp"
-        android:text="IP Lokal Anda: Menunggu..."/>
+        android:text="@string/ip_lokal_anda_menunggu"/>
 
 </LinearLayout>

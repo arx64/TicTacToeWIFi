@@ -75,35 +75,57 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    private void setRoleActive(boolean active) {
+        Button btnHost = findViewById(R.id.btn_host);
+        Button btnJoin = findViewById(R.id.btn_join);
+
+        // Jika sudah aktif, nonaktifkan tombol lawan
+        btnHost.setEnabled(!active);
+        btnJoin.setEnabled(!active);
+        etIpAddress.setEnabled(!active);
+        rgSymbolChoice.setEnabled(!active);
+        etPlayerName.setEnabled(!active);
+    }
+
     private void hostGame() {
         if (!validateInput()) return;
         tvStatus.setText("Mencoba menjadi Host...");
+
+        setRoleActive(true); // Kunci tombol lain
 
         udpCommunicator = new UdpCommunicator(handler, true);
         udpCommunicator.start();
     }
 
     private void joinGame() {
-        if (!validateInput()) return;
         String ip = etIpAddress.getText().toString().trim();
-        if (ip.isEmpty()) {
-            Toast.makeText(this, "Masukkan IP Server", Toast.LENGTH_SHORT).show();
+        if (!validateInput() || ip.isEmpty()) return;
+
+        // PENCEGAHAN BUG: Cek apakah IP yang dimasukkan adalah IP lokal sendiri
+        TextView tvLocalIp = findViewById(R.id.tv_local_ip);
+        String localIpText = tvLocalIp.getText().toString();
+        if (localIpText.contains(ip)) {
+            Toast.makeText(this, "Tidak bisa bergabung ke IP Anda sendiri!", Toast.LENGTH_LONG).show();
             return;
         }
+
         tvStatus.setText("Mencoba terhubung ke " + ip + "...");
 
+        setRoleActive(true); // Kunci tombol lain
+
         try {
-            InetAddress.getByName(ip); // Validasi IP
+            // ... (Logika koneksi sama)
+            InetAddress.getByName(ip);
             udpCommunicator = new UdpCommunicator(handler, ip, false);
             udpCommunicator.start();
 
-            // Kirim CONNECT: <Nama>,<SimbolPilihan>
             new Thread(() -> {
                 udpCommunicator.send("CONNECT:" + playerName + "," + chosenSymbol);
             }).start();
         } catch (UnknownHostException e) {
             tvStatus.setText("IP tidak valid.");
             Toast.makeText(this, "IP tidak valid", Toast.LENGTH_SHORT).show();
+            setRoleActive(false); // Buka kembali jika gagal
         }
     }
 

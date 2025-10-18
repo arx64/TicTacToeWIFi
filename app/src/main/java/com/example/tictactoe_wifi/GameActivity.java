@@ -1,7 +1,9 @@
 // com.example.tictactoe_wifi/GameActivity.java
 package com.example.tictactoe_wifi;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
@@ -20,10 +22,10 @@ public class GameActivity extends AppCompatActivity {
 
     private Button[][] buttons = new Button[3][3];
     private TextView tvGameStatus, tvScoreX, tvScoreO, tvChatLog;
-    private ScrollView svChatLogContainer;
     private EditText etChatInput;
     private Button btnReset;
     private ProgressBar pbTurnTimer;
+    private ScrollView svChatLogContainer;
 
     private boolean isHost;
     private boolean myTurn;
@@ -36,13 +38,15 @@ public class GameActivity extends AppCompatActivity {
     private int moveCount = 0;
     private boolean gameActive = true;
 
-    // Turn Timer Logic
+    // Timer Logic
     private Handler timerHandler = new Handler();
-    private static final int TURN_TIME_SECONDS = 10;
+    private static final int TURN_TIME_SECONDS = 15;
     private AtomicInteger currentTimerValue = new AtomicInteger(TURN_TIME_SECONDS);
+    private int opponentTimerProgress = TURN_TIME_SECONDS * 10;
 
     // Sequence Number untuk ACK
     private int currentSequenceNumber = 0;
+    private String lastProcessedSeqNum = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,11 +72,9 @@ public class GameActivity extends AppCompatActivity {
         pbTurnTimer = findViewById(R.id.pb_turn_timer);
         tvChatLog = findViewById(R.id.tv_chat_log);
         etChatInput = findViewById(R.id.et_chat_input);
-
-        // Inisialisasi ScrollView
         svChatLogContainer = findViewById(R.id.sv_chat_log_container);
 
-        pbTurnTimer.setMax(TURN_TIME_SECONDS * 10); // Max 150
+        pbTurnTimer.setMax(TURN_TIME_SECONDS * 10);
     }
 
     private void initializeBoard() {
@@ -86,9 +88,7 @@ public class GameActivity extends AppCompatActivity {
     }
 
     private void setupGame() {
-        // Tentukan giliran awal
         myTurn = mySymbol.equals("X");
-
         updateScoreDisplay();
 
         if (udpCommunicator != null) {
@@ -112,23 +112,39 @@ public class GameActivity extends AppCompatActivity {
             String message = (String) msg.obj;
             handleIncomingMessage(message);
         }
+        // Penanganan TIMEOUT dari UdpCommunicator
+        else if (msg.what == MainActivity.MESSAGE_STATUS && msg.obj.toString().startsWith("TIMEOUT:")) {
+            Toast.makeText(this, msg.obj.toString(), Toast.LENGTH_LONG).show();
+            returnToMain();
+        }
         return true;
     });
 
     private void handleIncomingMessage(String message) {
+        message = message.trim();
+
         if (message.startsWith("MOVE:")) {
-            // Format: MOVE:<R>,<C>,<SeqNum>
-            String[] parts = message.substring(5).split(",");
+            String data = message.substring(5);
+            String[] parts = data.split(",");
+
             if (parts.length == 3) {
-                int row = Integer.parseInt(parts[0]);
-                int col = Integer.parseInt(parts[1]);
-                String seqNum = parts[2];
+                try {
+                    int row = Integer.parseInt(parts[0]);
+                    int col = Integer.parseInt(parts[1]);
+                    String seqNum = parts[2];
 
-                // 1. Kirim ACK kembali (Keandalan UDP)
-                sendData("MOVE_ACK:" + seqNum);
+                    if (seqNum.equals(lastProcessedSeqNum)) {
+                        sendData("MOVE_ACK:" + seqNum);
+                        return;
+                    }
+                    lastProcessedSeqNum = seqNum;
 
-                // 2. Lakukan gerakan lawan
-                makeMove(row, col, opponentSymbol, false);
+                    sendData("MOVE_ACK:" + seqNum);
+                    makeMove(row, col, opponentSymbol, false);
+
+                } catch (NumberFormatException e) {
+                    // Error parsing
+                }
             }
         } else if (message.startsWith("RESET_REQ")) {
             Toast.makeText(this, opponentName + " meminta main lagi!", Toast.LENGTH_SHORT).show();
@@ -136,9 +152,44 @@ public class GameActivity extends AppCompatActivity {
         } else if (message.startsWith("CHAT:")) {
             String chatMsg = message.substring(5);
             updateChatLog(opponentName, chatMsg);
-        } else if (message.startsWith("HEARTBEAT")) {
-            // Abaikan Heartbeat, hanya untuk reset timeout di UdpCommunicator
+        } else if (message.startsWith("TIMER_SYNC:")) {
+            try {
+                int remainingSeconds = Integer.parseInt(message.substring(11));
+                opponentTimerProgress = remainingSeconds * 10;
+                if (!myTurn && gameActive) {
+                    pbTurnTimer.setProgress(opponentTimerProgress);
+                }
+            } catch (NumberFormatException ignored) {}
+        } else if (message.startsWith("TIMEOUT_LOSS")) {
+            timerHandler.removeCallbacks(timerRunnable);
+
+            if (mySymbol.equals("X")) {
+                scoreX++;
+            } else {
+                scoreO++;
+            }
+            gameActive = false;
+            updateScoreDisplay();
+            updateStatusText(opponentName + " kehabisan waktu! Anda Menang.");
+            btnReset.setVisibility(View.VISIBLE);
+        } else if (message.startsWith("DISCONNECT")) {
+            handleOpponentDisconnect();
         }
+    }
+
+    private void handleOpponentDisconnect() {
+        // Hentikan semua aktivitas game
+        gameActive = false;
+        timerHandler.removeCallbacks(timerRunnable);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Lawan Keluar")
+                .setMessage(opponentName + " telah keluar dari permainan. Anda akan kembali ke menu utama.")
+                .setCancelable(false)
+                .setPositiveButton("OK", (dialog, which) -> {
+                    returnToMain();
+                })
+                .show();
     }
 
     // --- Logika Timer ---
@@ -150,13 +201,12 @@ public class GameActivity extends AppCompatActivity {
         }
 
         currentTimerValue.set(TURN_TIME_SECONDS);
-        pbTurnTimer.setProgress(TURN_TIME_SECONDS * 10);
 
         if (myTurn) {
+            pbTurnTimer.setProgress(TURN_TIME_SECONDS * 10);
             timerHandler.postDelayed(timerRunnable, 100);
         } else {
-            // Timer lawan tidak perlu dihitung mundur secara visual, tapi kita tetap reset
-            pbTurnTimer.setProgress(TURN_TIME_SECONDS * 10);
+            pbTurnTimer.setProgress(opponentTimerProgress);
         }
     }
 
@@ -171,13 +221,24 @@ public class GameActivity extends AppCompatActivity {
             int currentProgress = pbTurnTimer.getProgress();
             if (currentProgress > 0) {
                 pbTurnTimer.setProgress(currentProgress - 1);
-                timerHandler.postDelayed(this, 100); // Update setiap 100ms
+
+                if (currentProgress % 10 == 0) {
+                    int remainingSeconds = currentProgress / 10;
+                    sendData("TIMER_SYNC:" + remainingSeconds);
+                }
+
+                timerHandler.postDelayed(this, 100);
             } else {
-                // Waktu Habis!
+                timerHandler.removeCallbacks(this);
+                sendData("TIMEOUT_LOSS");
+
                 Toast.makeText(GameActivity.this, "Waktu habis! Anda kalah di babak ini.", Toast.LENGTH_LONG).show();
 
-                // Lawan menang
-                scoreO++;
+                if (opponentSymbol.equals("X")) {
+                    scoreX++;
+                } else {
+                    scoreO++;
+                }
                 gameActive = false;
                 updateScoreDisplay();
                 updateStatusText(myName + " kehabisan waktu!");
@@ -186,7 +247,27 @@ public class GameActivity extends AppCompatActivity {
         }
     };
 
-    // --- Logika Klik ---
+    // --- Logika Keluar ---
+    private void handleCleanDisconnect() {
+        sendData("DISCONNECT");
+        timerHandler.removeCallbacks(timerRunnable);
+        returnToMain();
+    }
+
+    @Override
+    public void onBackPressed() {
+        new AlertDialog.Builder(this)
+                .setTitle("Keluar dari Game")
+                .setMessage("Apakah Anda yakin ingin keluar? Lawan akan menang secara otomatis.")
+                .setPositiveButton("Ya, Keluar", (dialog, which) -> {
+                    handleCleanDisconnect();
+                })
+                .setNegativeButton("Batal", null)
+                .show();
+    }
+
+    // --- Logika Game Lainnya ---
+
     public void onCellClicked(View v) {
         if (!myTurn || !gameActive) {
             Toast.makeText(this, "Bukan giliran Anda.", Toast.LENGTH_SHORT).show();
@@ -210,13 +291,10 @@ public class GameActivity extends AppCompatActivity {
             }
         }
 
-        // Increment Sequence Number
         currentSequenceNumber = (currentSequenceNumber + 1) % 1000;
 
-        // Lakukan gerakan lokal (isLocalMove = true)
         makeMove(row, col, mySymbol, true);
 
-        // Kirim gerakan ke lawan: MOVE:<R>,<C>,<SeqNum>
         String moveMsg = "MOVE:" + row + "," + col + "," + currentSequenceNumber;
         sendData(moveMsg);
     }
@@ -225,26 +303,22 @@ public class GameActivity extends AppCompatActivity {
         String message = etChatInput.getText().toString().trim();
         if (message.isEmpty()) return;
 
-        updateChatLog(myName, message);
-        sendData("CHAT:" + message);
+        String sanitizedMessage = message.replaceAll("[\r\n]", " ");
+        sanitizedMessage = sanitizedMessage.replace(":", ";");
+
+        if (sanitizedMessage.length() > 100) {
+            sanitizedMessage = sanitizedMessage.substring(0, 100);
+        }
+
+        updateChatLog(myName, sanitizedMessage);
+        sendData("CHAT:" + sanitizedMessage);
         etChatInput.setText("");
     }
 
-    // com.example.tictactoe_wifi/GameActivity.java
-
     private void updateChatLog(String sender, String message) {
-        // Ambil teks lama, tambahkan pesan baru
         String currentLog = tvChatLog.getText().toString();
-
-        // Batasi log agar tidak terlalu panjang (opsional, tapi disarankan)
-        if (currentLog.length() > 500) {
-            currentLog = "Chat Log:\n";
-        }
-
         tvChatLog.setText(currentLog + "\n" + sender + ": " + message);
 
-        // Logika Auto-Scroll: Memastikan ScrollView menggulir ke bawah
-        // Kita menggunakan post() karena pembaruan layout mungkin belum selesai
         svChatLogContainer.post(() -> {
             svChatLogContainer.fullScroll(View.FOCUS_DOWN);
         });
@@ -258,13 +332,14 @@ public class GameActivity extends AppCompatActivity {
     private void makeMove(int row, int col, String symbol, boolean isLocalMove) {
         if (!gameActive) return;
 
-        buttons[row][col].setText(symbol);
-        moveCount++;
+        if (buttons[row][col] != null) {
+            buttons[row][col].setText(symbol);
+        }
 
-        // Hentikan timer saat gerakan dilakukan
+        moveCount++;
         timerHandler.removeCallbacks(timerRunnable);
 
-        if (checkForWin(symbol)) {
+        if (checkForWin(symbol) || moveCount == 9) {
             gameActive = false;
 
             if (symbol.equals("X")) {
@@ -280,15 +355,12 @@ public class GameActivity extends AppCompatActivity {
 
             btnReset.setVisibility(View.VISIBLE);
 
-        } else if (moveCount == 9) {
-            gameActive = false;
-            updateStatusText("SERI!");
-            btnReset.setVisibility(View.VISIBLE);
         } else {
-            // Ganti giliran
-            myTurn = !isLocalMove;
+            String nextPlayerSymbol = symbol.equals("X") ? "O" : "X";
+            myTurn = nextPlayerSymbol.equals(mySymbol);
+
             updateStatusText(null);
-            startTurnTimer(); // Mulai timer untuk giliran baru
+            startTurnTimer();
         }
     }
 
@@ -296,15 +368,17 @@ public class GameActivity extends AppCompatActivity {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 buttons[i][j].setText("");
-                buttons[i][j].setBackgroundColor(Color.parseColor("#E0E0E0")); // Reset warna
+                buttons[i][j].setBackgroundColor(Color.parseColor("#E0E0E0"));
             }
         }
         moveCount = 0;
         gameActive = true;
         btnReset.setVisibility(View.GONE);
 
-        // X selalu mulai duluan
         myTurn = mySymbol.equals("X");
+
+        lastProcessedSeqNum = "";
+        currentSequenceNumber = 0;
 
         updateStatusText(null);
         startTurnTimer();
@@ -327,7 +401,6 @@ public class GameActivity extends AppCompatActivity {
     }
 
     private boolean checkForWin(String symbol) {
-        // ... (Logika pengecekan kemenangan sama)
         String[][] board = new String[3][3];
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -335,7 +408,6 @@ public class GameActivity extends AppCompatActivity {
             }
         }
 
-        // Cek baris, kolom, dan diagonal
         for (int i = 0; i < 3; i++) {
             if (board[i][0].equals(symbol) && board[i][1].equals(symbol) && board[i][2].equals(symbol)) return true;
             if (board[0][i].equals(symbol) && board[1][i].equals(symbol) && board[2][i].equals(symbol)) return true;
@@ -347,7 +419,6 @@ public class GameActivity extends AppCompatActivity {
     }
 
     private void highlightWinningLine(String symbol) {
-        // Logika ini harus diulang karena checkForWin tidak menyimpan koordinat
         String[][] board = new String[3][3];
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -355,9 +426,8 @@ public class GameActivity extends AppCompatActivity {
             }
         }
 
-        int highlightColor = Color.parseColor("#8BC34A"); // Hijau
+        int highlightColor = Color.parseColor("#8BC34A");
 
-        // Cek baris
         for (int i = 0; i < 3; i++) {
             if (board[i][0].equals(symbol) && board[i][1].equals(symbol) && board[i][2].equals(symbol)) {
                 buttons[i][0].setBackgroundColor(highlightColor);
@@ -366,7 +436,6 @@ public class GameActivity extends AppCompatActivity {
                 return;
             }
         }
-        // Cek kolom
         for (int i = 0; i < 3; i++) {
             if (board[0][i].equals(symbol) && board[1][i].equals(symbol) && board[2][i].equals(symbol)) {
                 buttons[0][i].setBackgroundColor(highlightColor);
@@ -375,14 +444,12 @@ public class GameActivity extends AppCompatActivity {
                 return;
             }
         }
-        // Diagonal utama
         if (board[0][0].equals(symbol) && board[1][1].equals(symbol) && board[2][2].equals(symbol)) {
             buttons[0][0].setBackgroundColor(highlightColor);
             buttons[1][1].setBackgroundColor(highlightColor);
             buttons[2][2].setBackgroundColor(highlightColor);
             return;
         }
-        // Diagonal sekunder
         if (board[0][2].equals(symbol) && board[1][1].equals(symbol) && board[2][0].equals(symbol)) {
             buttons[0][2].setBackgroundColor(highlightColor);
             buttons[1][1].setBackgroundColor(highlightColor);
@@ -398,6 +465,19 @@ public class GameActivity extends AppCompatActivity {
         } else {
             Toast.makeText(this, "Koneksi terputus! Tidak dapat mengirim data.", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void returnToMain() {
+        timerHandler.removeCallbacks(timerRunnable);
+        if (udpCommunicator != null) {
+            udpCommunicator.cancel();
+            udpCommunicator = null;
+        }
+
+        Intent intent = new Intent(GameActivity.this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
     }
 
     @Override

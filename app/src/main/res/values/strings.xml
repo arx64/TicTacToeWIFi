@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Tictactoe Wifi</string>
+    <string name="status_koneksi_belum_terhubung">Status Koneksi: Belum Terhubung</string>
+    <string name="masukkan_nama_anda">Masukkan Nama Anda</string>
+    <string name="pilih_simbol_awal">Pilih Simbol Awal:</string>
+    <string name="x_mulai_duluan">X (Mulai Duluan)</string>
+    <string name="o">O</string>
+    <string name="host_game_server">HOST GAME (Server)</string>
+    <string name="masukkan_ip_server_jika_join">Masukkan IP Server (Jika Join)</string>
+    <string name="join_game_client">JOIN GAME (Client)</string>
+    <string name="ip_lokal_anda_menunggu">IP Lokal Anda: Menunggu...</string>
 </resources>
