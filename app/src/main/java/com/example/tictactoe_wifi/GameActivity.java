@@ -71,8 +71,8 @@ public class GameActivity extends AppCompatActivity {
         String playerXName = mySymbol.equals("X") ? myName : opponentName;
         String playerOName = mySymbol.equals("O") ? myName : opponentName;
 
-        String startTimeStr = new java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault()).format(new java.util.Date(startTimeMillis));
-        String endTimeStr = new java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault()).format(new java.util.Date());
+        String startTimeStr = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(new java.util.Date(startTimeMillis));
+        String endTimeStr = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(new java.util.Date());
 
         GameRecord record = new GameRecord(
                 playerXName,
@@ -366,7 +366,7 @@ public class GameActivity extends AppCompatActivity {
         moveCount++;
         timerHandler.removeCallbacks(timerRunnable);
 
-        if (checkForWin(symbol) || moveCount == 9) {
+        if (checkForWin() || moveCount == 9) {
             gameActive = false;
 
             if (symbol.equals("X")) {
@@ -430,7 +430,7 @@ public class GameActivity extends AppCompatActivity {
         }
     }
 
-    private boolean checkForWin(String symbol) {
+    private boolean checkForWin() {
         String[][] board = new String[3][3];
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -438,12 +438,39 @@ public class GameActivity extends AppCompatActivity {
             }
         }
 
+        // Cek baris
         for (int i = 0; i < 3; i++) {
-            if (board[i][0].equals(symbol) && board[i][1].equals(symbol) && board[i][2].equals(symbol)) return true;
-            if (board[0][i].equals(symbol) && board[1][i].equals(symbol) && board[2][i].equals(symbol)) return true;
+            // Kunci: Pastikan board[i][0] TIDAK KOSONG, lalu cek apakah semua sel di baris itu sama.
+            if (!board[i][0].isEmpty() &&
+                    board[i][0].equals(board[i][1]) &&
+                    board[i][0].equals(board[i][2])) {
+                return true;
+            }
         }
-        if (board[0][0].equals(symbol) && board[1][1].equals(symbol) && board[2][2].equals(symbol)) return true;
-        if (board[0][2].equals(symbol) && board[1][1].equals(symbol) && board[2][0].equals(symbol)) return true;
+
+        // Cek kolom
+        for (int i = 0; i < 3; i++) {
+            // Kunci: Pastikan board[0][i] TIDAK KOSONG, lalu cek apakah semua sel di kolom itu sama.
+            if (!board[0][i].isEmpty() &&
+                    board[0][i].equals(board[1][i]) &&
+                    board[0][i].equals(board[2][i])) {
+                return true;
+            }
+        }
+
+        // Cek Diagonal Utama (0,0 -> 2,2)
+        if (!board[0][0].isEmpty() &&
+                board[0][0].equals(board[1][1]) &&
+                board[0][0].equals(board[2][2])) {
+            return true;
+        }
+
+        // Cek Diagonal Sekunder (0,2 -> 2,0)
+        if (!board[0][2].isEmpty() &&
+                board[0][2].equals(board[1][1]) &&
+                board[0][2].equals(board[2][0])) {
+            return true;
+        }
 
         return false;
     }
