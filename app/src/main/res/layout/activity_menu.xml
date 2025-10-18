@@ -1,0 +1,39 @@
+<!-- res/layout/activity_menu.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    tools:context=".MenuActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TicTacToe Wi-Fi"
+        android:textSize="36sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="50dp"/>
+
+    <Button
+        android:id="@+id/btn_start_game"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Main Game"
+        android:layout_marginBottom="15dp"/>
+
+    <Button
+        android:id="@+id/btn_history"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Riwayat"
+        android:layout_marginBottom="15dp"/>
+
+    <Button
+        android:id="@+id/btn_how_to_play"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Cara Main"/>
+
+</LinearLayout>

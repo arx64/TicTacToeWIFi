@@ -47,6 +47,7 @@ public class GameActivity extends AppCompatActivity {
     // Sequence Number untuk ACK
     private int currentSequenceNumber = 0;
     private String lastProcessedSeqNum = "";
+    private long startTimeMillis;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,9 +60,29 @@ public class GameActivity extends AppCompatActivity {
         opponentName = getIntent().getStringExtra("OPPONENT_NAME");
         opponentSymbol = getIntent().getStringExtra("OPPONENT_SYMBOL");
 
+        startTimeMillis = System.currentTimeMillis(); // Catat waktu mulai
+
         initViews();
         initializeBoard();
         setupGame();
+    }
+
+    private void saveGameRecord() {
+        String playerXName = mySymbol.equals("X") ? myName : opponentName;
+        String playerOName = mySymbol.equals("O") ? myName : opponentName;
+
+        String startTimeStr = new java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault()).format(new java.util.Date(startTimeMillis));
+        String endTimeStr = new java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault()).format(new java.util.Date());
+
+        GameRecord record = new GameRecord(
+                playerXName,
+                playerOName,
+                scoreX,
+                scoreO,
+                startTimeStr,
+                endTimeStr
+        );
+        HistoryManager.saveRecord(this, record);
     }
 
     private void initViews() {
@@ -112,7 +133,6 @@ public class GameActivity extends AppCompatActivity {
             String message = (String) msg.obj;
             handleIncomingMessage(message);
         }
-        // Penanganan TIMEOUT dari UdpCommunicator
         else if (msg.what == MainActivity.MESSAGE_STATUS && msg.obj.toString().startsWith("TIMEOUT:")) {
             Toast.makeText(this, msg.obj.toString(), Toast.LENGTH_LONG).show();
             returnToMain();
@@ -168,6 +188,9 @@ public class GameActivity extends AppCompatActivity {
             } else {
                 scoreO++;
             }
+
+            // --- SIMPAN RECORD GAME (LAWANN TIMEOUT) ---
+            saveGameRecord();
             gameActive = false;
             updateScoreDisplay();
             updateStatusText(opponentName + " kehabisan waktu! Anda Menang.");
@@ -178,7 +201,6 @@ public class GameActivity extends AppCompatActivity {
     }
 
     private void handleOpponentDisconnect() {
-        // Hentikan semua aktivitas game
         gameActive = false;
         timerHandler.removeCallbacks(timerRunnable);
 
@@ -234,11 +256,13 @@ public class GameActivity extends AppCompatActivity {
 
                 Toast.makeText(GameActivity.this, "Waktu habis! Anda kalah di babak ini.", Toast.LENGTH_LONG).show();
 
+
                 if (opponentSymbol.equals("X")) {
                     scoreX++;
                 } else {
                     scoreO++;
                 }
+                saveGameRecord();
                 gameActive = false;
                 updateScoreDisplay();
                 updateStatusText(myName + " kehabisan waktu!");
@@ -256,6 +280,9 @@ public class GameActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        // Peringatan: Jika Anda menggunakan API 33+, Anda mungkin perlu menggunakan OnBackPressedCallback.
+        // Untuk kompatibilitas luas, kita menggunakan struktur ini.
+
         new AlertDialog.Builder(this)
                 .setTitle("Keluar dari Game")
                 .setMessage("Apakah Anda yakin ingin keluar? Lawan akan menang secara otomatis.")
@@ -348,6 +375,9 @@ public class GameActivity extends AppCompatActivity {
                 scoreO++;
             }
             updateScoreDisplay();
+
+            // --- SIMPAN RECORD GAME ---
+            saveGameRecord();
 
             String winnerName = (symbol.equals(mySymbol)) ? myName : opponentName;
             updateStatusText(winnerName + " (" + symbol + ") MENANG!");
