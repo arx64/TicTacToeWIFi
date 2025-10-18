@@ -32,8 +32,8 @@ public class MenuActivity extends AppCompatActivity {
 
         // 3. Tombol "Cara Main" (Placeholder)
         btnHowToPlay.setOnClickListener(v -> {
-            // Di sini Anda bisa meluncurkan Activity Cara Main atau menampilkan dialog
-            Toast.makeText(MenuActivity.this, "Cara Main: Hubungkan dua perangkat ke Wi-Fi yang sama. Satu menjadi HOST, yang lain JOIN dengan memasukkan IP HOST.", Toast.LENGTH_LONG).show();
+            Intent intent = new Intent(MenuActivity.this, HowToPlayActivity.class);
+            startActivity(intent);
         });
     }
 }

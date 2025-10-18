@@ -9,4 +9,23 @@
     <string name="masukkan_ip_server_jika_join">Masukkan IP Server (Jika Join)</string>
     <string name="join_game_client">JOIN GAME (Client)</string>
     <string name="ip_lokal_anda_menunggu">IP Lokal Anda: Menunggu...</string>
+
+    <!-- Teks untuk How To Play Activity -->
+    <string name="how_to_play_title">Cara Bermain TicTacToe Wi-Fi</string>
+    <string name="section_1_title">1. Tujuan Permainan</string>
+    <string name="section_1_desc">Menjadi pemain pertama yang berhasil menempatkan tiga simbol (X atau O) secara berurutan, baik horizontal, vertikal, maupun diagonal.</string>
+
+    <string name="section_2_title">2. Koneksi Jaringan (Wi-Fi Lokal)</string>
+    <string name="section_2_desc_1">Kedua perangkat harus terhubung ke jaringan Wi-Fi yang SAMA.</string>
+    <string name="section_2_host_title">A. HOST GAME (Server):</string>
+    <string name="section_2_host_desc">- Pilih \'HOST GAME\'. Perangkat ini akan menjadi Server dan menampilkan IP Lokal Anda.\n- Host (X) selalu mendapat giliran pertama (kecuali ada konflik simbol).</string>
+    <string name="section_2_client_title">B. JOIN GAME (Client):</string>
+    <string name="section_2_client_desc">- Masukkan IP Lokal yang ditampilkan oleh perangkat HOST.\n- Pilih \'JOIN GAME\'. Perangkat ini akan menjadi Client (O).</string>
+
+    <string name="section_3_title">3. Aturan Permainan</string>
+    <string name="section_3_desc">a. Giliran:\nSimbol X selalu memulai permainan.\n\nb. Turn Timer:\nSetiap pemain memiliki waktu 15 detik untuk melakukan gerakan. Jika waktu habis, pemain tersebut dinyatakan kalah di babak itu.\n\nc. Reset:\nTombol \'Main Lagi\' muncul setelah babak selesai. Kedua pemain harus setuju untuk memulai babak baru.</string>
+
+    <string name="section_4_title">4. Fitur Tambahan</string>
+    <string name="section_4_desc">a. Riwayat: Melihat skor dan waktu pertandingan yang telah selesai.\nb. Chat: Mengirim pesan real-time ke lawan.\nc. Disconnect: Jika lawan keluar atau koneksi terputus selama 15 detik, game akan otomatis berakhir.</string>
+
 </resources>
