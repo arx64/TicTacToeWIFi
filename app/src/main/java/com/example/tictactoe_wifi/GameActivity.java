@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -128,7 +129,7 @@ public class GameActivity extends AppCompatActivity {
     }
 
     // --- Handler Jaringan ---
-    Handler gameHandler = new Handler(msg -> {
+    Handler gameHandler = new Handler(Looper.getMainLooper(), msg -> {
         if (msg.what == MainActivity.MESSAGE_READ) {
             String message = (String) msg.obj;
             handleIncomingMessage(message);
@@ -366,7 +367,7 @@ public class GameActivity extends AppCompatActivity {
         moveCount++;
         timerHandler.removeCallbacks(timerRunnable);
 
-        if (checkForWin() || moveCount == 9) {
+        if (checkForWin()) {
             gameActive = false;
 
             if (symbol.equals("X")) {
@@ -374,9 +375,8 @@ public class GameActivity extends AppCompatActivity {
             } else {
                 scoreO++;
             }
-            updateScoreDisplay();
 
-            // --- SIMPAN RECORD GAME ---
+            updateScoreDisplay();
             saveGameRecord();
 
             String winnerName = (symbol.equals(mySymbol)) ? myName : opponentName;
@@ -385,6 +385,13 @@ public class GameActivity extends AppCompatActivity {
 
             btnReset.setVisibility(View.VISIBLE);
 
+        } else if (moveCount == 9) {
+            // === GAME SERI ===
+            gameActive = false;
+            saveGameRecord();
+
+            updateStatusText("Seri! Tidak ada pemenang.");
+            btnReset.setVisibility(View.VISIBLE);
         } else {
             String nextPlayerSymbol = symbol.equals("X") ? "O" : "X";
             myTurn = nextPlayerSymbol.equals(mySymbol);

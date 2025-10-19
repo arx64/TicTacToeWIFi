@@ -4,7 +4,7 @@ package com.example.tictactoe_wifi;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 
-public class HowToPlayActivity extends AppCompatActivity {
+public class HowToPlayActivity extends BaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

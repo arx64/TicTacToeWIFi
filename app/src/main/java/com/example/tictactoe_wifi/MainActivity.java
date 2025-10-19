@@ -1,7 +1,6 @@
 // com.example.tictactoe_wifi/MainActivity.java
 package com.example.tictactoe_wifi;
 
-import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.wifi.WifiManager;
@@ -16,7 +15,7 @@ import android.widget.Toast;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BaseActivity {
 
     public static final int MESSAGE_READ = 1;
     public static final int MESSAGE_CONNECTION_SUCCESS = 3;

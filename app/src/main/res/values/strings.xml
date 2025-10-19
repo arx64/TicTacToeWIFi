@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Tictactoe Wifi</string>
+    <string name="app_name">Ti-Fi</string>
     <string name="status_koneksi_belum_terhubung">Status Koneksi: Belum Terhubung</string>
     <string name="masukkan_nama_anda">Masukkan Nama Anda</string>
     <string name="pilih_simbol_awal">Pilih Simbol Awal:</string>

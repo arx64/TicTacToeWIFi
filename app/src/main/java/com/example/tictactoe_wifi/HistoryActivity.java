@@ -14,7 +14,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import java.util.List;
 
-public class HistoryActivity extends AppCompatActivity {
+public class HistoryActivity extends BaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
