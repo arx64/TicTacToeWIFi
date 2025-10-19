@@ -3,17 +3,34 @@ package com.example.tictactoe_wifi;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.format.Formatter;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+
+import androidx.activity.result.ActivityResultLauncher;
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
+
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
 
 public class MainActivity extends BaseActivity {
 
@@ -23,13 +40,33 @@ public class MainActivity extends BaseActivity {
     public static final int MESSAGE_STATUS = 5;
     public static final int PORT = 8888;
 
+    // --- 1. DEKLARASIKAN VARIABEL DI SINI (TANPA INISIALISASI findViewById) ---
     private EditText etIpAddress, etPlayerName;
-    private TextView tvStatus;
+    private TextView tvStatus, tvLocalIp;
     private RadioGroup rgSymbolChoice;
+    private Button btnHost, btnJoin, btnScanQr;
+    private ImageView imgQrCode;
+    private LinearLayout layoutJoinArea;
 
     private UdpCommunicator udpCommunicator;
     private String playerName;
     private String chosenSymbol;
+
+    private final ActivityResultLauncher<ScanOptions> qrCodeLauncher = registerForActivityResult(new ScanContract(),
+            result -> {
+                if (result.getContents() == null) {
+                    // Pengguna membatalkan scan
+                    Toast.makeText(this, "Scan dibatalkan", Toast.LENGTH_LONG).show();
+                } else {
+                    // Hasil scan didapatkan (ini adalah alamat IP dari Host)
+                    String scannedIp = result.getContents();
+                    Toast.makeText(this, "Hasil Scan: " + scannedIp, Toast.LENGTH_LONG).show();
+
+                    // Masukkan IP hasil scan ke EditText dan panggil joinGame()
+                    etIpAddress.setText(scannedIp);
+                    joinGame();
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,25 +76,127 @@ public class MainActivity extends BaseActivity {
         initViews();
         displayLocalIp();
 
-        findViewById(R.id.btn_host).setOnClickListener(v -> hostGame());
-        findViewById(R.id.btn_join).setOnClickListener(v -> joinGame());
+        // --- INI ADALAH KODE BARU UNTUK btnHost ---
+        btnHost.setOnClickListener(v -> {
+            // Validasi input nama dan simbol sebelum melanjutkan
+            if (!validateInput()) {
+                return; // Berhenti jika input tidak valid
+            }
+
+            try {
+                String localIp = getLocalIpAddress();
+                if (localIp != null) {
+                    // Sembunyikan tombol-tombol dan area input manual
+                    layoutJoinArea.setVisibility(View.GONE);
+                    btnJoin.setVisibility(View.GONE);
+                    btnHost.setVisibility(View.GONE); // Sembunyikan juga tombol host setelah ditekan
+
+                    // Tampilkan QR Code
+                    Bitmap qrBitmap = generateQRCode(localIp);
+                    imgQrCode.setImageBitmap(qrBitmap);
+                    imgQrCode.setVisibility(View.VISIBLE);
+
+                    tvStatus.setText("Pindai QR Code untuk bergabung...");
+                    Toast.makeText(this, "Pindai QR Code ini agar lawan bisa bergabung.", Toast.LENGTH_LONG).show();
+
+                    // Setelah menampilkan QR, perangkat ini otomatis menjadi Host
+                    // hostGame() sudah termasuk validateInput, tapi kita panggil lagi di sini
+                    // untuk memastikan proses hosting dimulai setelah QR ditampilkan.
+                    // validateInput() yang dipanggil di awal memastikan nama pemain sudah terisi.
+                    hostGame();
+
+                } else {
+                    Toast.makeText(this, "Gagal mendapatkan IP lokal. Pastikan terhubung ke Wi-Fi.", Toast.LENGTH_LONG).show();
+                }
+            } catch (WriterException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "Gagal membuat QR Code.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnJoin.setOnClickListener(v -> joinGame());
+        // Hapus pemanggilan joinGame() yang salah di sini
+//        findViewById(R.id.btn_manual_join).setOnClickListener(v -> joinGame()); // Gunakan tombol terpisah untuk join manual
+
+        // --- 3. TAMBAHKAN LISTENER UNTUK TOMBOL SCAN BARU ---
+        btnScanQr.setOnClickListener(v -> {
+            // Validasi nama pemain sebelum scan
+            if (!validateInput()) {
+                return;
+            }
+            // Mulai proses scan
+            launchScanner();
+        });
+    }
+
+    // --- 4. BUAT FUNGSI UNTUK MELUNCURKAN SCANNER ---
+    private void launchScanner() {
+        ScanOptions options = new ScanOptions();
+        options.setPrompt("Arahkan kamera ke QR Code lawan");
+        options.setBeepEnabled(true); // Bunyi saat berhasil scan
+        options.setOrientationLocked(false); // Izinkan rotasi
+//        options.setCaptureActivity(CaptureActivityPortrait.class); // Gunakan activity portrait (opsional, perlu dependensi tambahan jika ingin custom)
+
+        qrCodeLauncher.launch(options);
+    }
+
+    // Fungsi untuk membuat QR Code
+    private Bitmap generateQRCode(String text) throws WriterException {
+        // ... (kode Anda sudah benar)
+        QRCodeWriter writer = new QRCodeWriter();
+        int size = 400;
+        BitMatrix bitMatrix = writer.encode(text, BarcodeFormat.QR_CODE, size, size);
+        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565);
+        for (int x = 0; x < size; x++) {
+            for (int y = 0; y < size; y++) {
+                bitmap.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
+            }
+        }
+        return bitmap;
+    }
+
+    // Fungsi untuk ambil IP lokal (Wi-Fi)
+    private String getLocalIpAddress() {
+        // ... (kode Anda sudah benar)
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    // Pastikan itu adalah IPv4 dan bukan loopback
+                    if (!inetAddress.isLoopbackAddress() && inetAddress instanceof java.net.Inet4Address) {
+                        return inetAddress.getHostAddress();
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return null;
     }
 
     private void initViews() {
+        // --- 4. INISIALISASIKAN SEMUA VIEW DI SINI ---
         etIpAddress = findViewById(R.id.et_ip_address);
         etPlayerName = findViewById(R.id.et_player_name);
         tvStatus = findViewById(R.id.status_text);
         rgSymbolChoice = findViewById(R.id.rg_symbol_choice);
+
+        // Inisialisasi variabel yang sebelumnya menyebabkan crash
+        btnHost = findViewById(R.id.btn_host);
+        imgQrCode = findViewById(R.id.img_qr_code);
+        layoutJoinArea = findViewById(R.id.layout_join_area);
+        btnJoin = findViewById(R.id.btn_join);
+        btnScanQr = findViewById(R.id.btn_scan_qr);
+        tvLocalIp = findViewById(R.id.tv_local_ip);
     }
 
     private void displayLocalIp() {
-        // ... (Logika display IP sama)
-        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        if (wifiManager != null) {
-            @SuppressWarnings("deprecation")
-            int ipAddressInt = wifiManager.getConnectionInfo().getIpAddress();
-            String ipAddress = Formatter.formatIpAddress(ipAddressInt);
-            ((TextView)findViewById(R.id.tv_local_ip)).setText("IP Lokal Anda: " + ipAddress + " (Port: " + PORT + ")");
+        String ipAddress = getLocalIpAddress();
+        if (ipAddress != null) {
+            tvLocalIp.setText("IP Lokal Anda: " + ipAddress + " (Port: " + PORT + ")");
+        } else {
+            tvLocalIp.setText("IP Lokal tidak ditemukan. Pastikan terhubung ke Wi-Fi.");
         }
     }
 

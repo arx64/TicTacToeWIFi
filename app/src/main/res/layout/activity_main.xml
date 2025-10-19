@@ -38,10 +38,20 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_marginBottom="10dp">
-        <RadioButton android:id="@+id/rb_x" android:text="@string/x_mulai_duluan" android:checked="true" android:layout_height="wrap_content" android:layout_width="wrap_content"/>
-        <RadioButton android:id="@+id/rb_o" android:text="@string/o" android:layout_height="wrap_content" android:layout_width="wrap_content"/>
+        <RadioButton
+            android:id="@+id/rb_x"
+            android:text="@string/x_mulai_duluan"
+            android:checked="true"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"/>
+        <RadioButton
+            android:id="@+id/rb_o"
+            android:text="@string/o"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"/>
     </RadioGroup>
 
+    <!-- Tombol Host Game -->
     <Button
         android:id="@+id/btn_host"
         android:layout_width="match_parent"
@@ -49,26 +59,46 @@
         android:text="@string/host_game_server"
         android:layout_marginBottom="10dp"/>
 
-    <EditText
-        android:id="@+id/et_ip_address"
+    <!-- QR Code (sembunyi dulu) -->
+    <ImageView
+        android:id="@+id/img_qr_code"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_marginBottom="10dp"
+        android:visibility="gone" />
+
+    <!-- Area Input IP dan Tombol Scan -->
+    <LinearLayout
+        android:id="@+id/layout_join_area"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/masukkan_ip_server_jika_join"
-        android:inputType="text"
-        android:autofillHints="ip"
-        android:layout_marginBottom="10dp"/>
+        android:orientation="horizontal"
+        android:layout_marginBottom="10dp">
+        <EditText
+            android:id="@+id/et_ip_address"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Masukkan IP Server (Jika Join)"
+            android:inputType="text" />
+        <Button
+            android:id="@+id/btn_scan_qr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SCAN" />
+    </LinearLayout>
 
     <Button
         android:id="@+id/btn_join"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/join_game_client"/>
+        android:text="@string/join_game_client" />
 
     <TextView
         android:id="@+id/tv_local_ip"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="30dp"
-        android:text="@string/ip_lokal_anda_menunggu"/>
+        android:text="@string/ip_lokal_anda_menunggu" />
 
 </LinearLayout>
